@@ -16,7 +16,7 @@ function getEmailContent(message) {
         body = Buffer.from(message.payload.body.data, 'base64').toString('utf-8');
     }
 
-    return { subject, body };
+    return { subject, body , completePayload: message.payload };
 }
 
 function getBody(parts) {

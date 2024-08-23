@@ -28,6 +28,8 @@ async function listMessages(auth) {
             return [];
         }
         const emails = [];
+        const completeEmails = [];
+
         for (const message of messages) {
             const msg = await gmail.users.messages.get({
                 userId: 'me',
@@ -35,8 +37,10 @@ async function listMessages(auth) {
             });
             const emailData = getEmailContent(msg.data);
             emails.push(emailData);
+            completeEmails.push(emailData.completePayload);
         }
-        return emails;
+        // return emails;
+        return completeEmails;
     } catch (error) {
         console.error('Error listing messages:', error);
         throw error;

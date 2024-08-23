@@ -1,23 +1,16 @@
 const fs = require('fs').promises;
+require('dotenv').config();
 const { google } = require('googleapis');
 const { authenticate } = require('@google-cloud/local-auth');
 const { TOKEN_PATH, CREDENTIALS_PATH, SCOPES } = require('../config/constants');
 
+
+// Not using the File way to store tokens anymore - Putting that env file
+/*
 async function loadSavedCredentialsIfExist() {
     try {
         const content = await fs.readFile(TOKEN_PATH);
-        const credentials1 = JSON.parse(content);
-        const credentials = {
-            web: {
-                client_id: process.env.GOOGLE_CLIENT_ID,
-                project_id: process.env.GOOGLE_PROJECT_ID,
-                auth_uri: process.env.GOOGLE_AUTH_URI,
-                token_uri: process.env.GOOGLE_TOKEN_URI,
-                auth_provider_x509_cert_url: process.env.GOOGLE_AUTH_PROVIDER_CERT_URL,
-                client_secret: process.env.GOOGLE_CLIENT_SECRET,
-                redirect_uris: [process.env.GOOGLE_REDIRECT_URIS],
-            }
-        };
+        const credentials= JSON.parse(content);
         return google.auth.fromJSON(credentials);
     } catch (err) {
         return null;
@@ -50,7 +43,31 @@ async function authorize() {
     }
     return client;
 }
+*/
+
+
+async function authorize1(){
+    try{
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+        const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
+
+        if (!clientId || !clientSecret || !refreshToken) {
+            throw new Error('Missing Google API credentials in environment variables');
+        }
+
+        const auth = new google.auth.OAuth2(clientId, clientSecret);
+        auth.setCredentials({
+            refresh_token: refreshToken,
+        });
+
+        return auth;
+    }catch(err){
+        return null;
+    }
+}
 
 module.exports = {
     authorize,
+    authorize1,
 };
