@@ -1,49 +1,99 @@
 const logger = require('../config/logger');
+const moment = require('moment');
 const transporter = require('../config/nodemailer');
 const { querySimilarEmails } = require('./searchService');
 
-// Service function to generate and send the report
 // Service function to generate and send the report via email
 async function sendEmailReport(text, recipientEmail) {
     try {
         // Query similar emails and get sorted results by urgency
         const results = await querySimilarEmails(text);
+        const currentDate = moment().format('MMMM Do, YYYY');
+        const currentTime = moment().format('h:mm A'); 
 
-        // Prepare the report content
+        // Prepare the report content with a neutral color palette
         const sentimentSummary = `
-            <ul>
-                <li>Positive: ${results.filter(result => result.sentiment === 'Positive').length}</li>
-                <li>Negative: ${results.filter(result => result.sentiment === 'Negative').length}</li>
-                <li>Neutral: ${results.filter(result => result.sentiment === 'Neutral').length}</li>
-            </ul>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr>
+                    <th style="padding: 12px; border: 1px solid #ddd; background-color: #4A4A4A; color: #ffffff;">Sentiment</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; background-color: #4A4A4A; color: #ffffff;">Count</th>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; color: green;">Positive</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${results.filter(result => result.sentiment === 'Positive').length}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; color: red;">Negative</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${results.filter(result => result.sentiment === 'Negative').length}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; color: gray;">Neutral</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${results.filter(result => result.sentiment === 'Neutral').length}</td>
+                </tr>
+            </table>
         `;
 
         const detailedResults = results.map(result => `
-            <li>
-                <strong>Text:</strong> ${result.text}<br>
-                <strong>Sentiment:</strong> ${result.sentiment}<br>
-                <strong>Urgency:</strong> ${result.urgency}<br>
-            </li>
+            <tr>
+                <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">
+                    ${result.text}
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">
+                    <span style="color: ${result.sentiment === 'Positive' ? 'green' : result.sentiment === 'Negative' ? 'red' : 'gray'};">
+                        ${result.sentiment}
+                    </span>
+                </td>
+                <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">
+                    ${result.urgency}
+                </td>
+            </tr>
         `).join('');
 
         const reportContent = `
-            <h1>Email Sentiment Report</h1>
-            <p><strong>Text Analyzed:</strong> ${text}</p>
-            <p><strong>Sentiment Summary:</strong></p>
-            ${sentimentSummary}
-            <p><strong>Total Results:</strong> ${results.length}</p>
-            <h2>Detailed Results:</h2>
-            <ul>
-                ${detailedResults}
-            </ul>
+            <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                <header style="text-align: center; margin-bottom: 20px;">
+                    <img src="https://i.postimg.cc/h4827zFB/Group-1.png" alt="Logo" style="width: 240px; height: auto; margin-bottom: 20px;">
+                    <h1 style="color: #4A4A4A; margin: 0;">Strategic Sentiment Insights Report</h1>
+                </header>
+
+                <section style="margin-bottom: 40px;">
+                <p style="font-size: 16px; color: #555; margin-bottom: 10px;">Created On: ${currentDate} at ${currentTime}</p>
+                    <h2 style="color: #333; font-size: 19px;">Text Analyzed:</h2>
+                    <p style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd; font-size: 15px; text-transform: capitalize;">
+                        ${text.toLowerCase().replace(/\b\w/g, char => char.toUpperCase())}
+                    </p>
+                </section>
+
+                <section style="margin-bottom: 40px;">
+                    <h2 style="color: #333;">Sentiment Summary:</h2>
+                    ${sentimentSummary}
+                </section>
+
+                <section>
+                    <h2 style="color: #333;">Detailed Results:</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #4A4A4A; color: #ffffff;">Text</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #4A4A4A; color: #ffffff;">Sentiment</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #4A4A4A; color: #ffffff;">Urgency</th>
+                        </tr>
+                        ${detailedResults}
+                    </table>
+                </section>
+
+                <footer style="margin-top: 40px; text-align: center; font-size: 0.9em; color: #777;">
+                    <p>This report was automatically generated by the system.</p>
+                    <p>&copy; 2024 DataWeave.AI</p>
+                </footer>
+            </div>
         `;
 
         // Set up email options
         const mailOptions = {
-            from: process.env.SENDING_EMAIL,      
-            to: recipientEmail,                  
-            subject: 'Email Analysis Report',  
-            html: reportContent,                 
+            from: process.env.SENDING_EMAIL,      // Sender's email address
+            to: recipientEmail,                   // Recipient's email address
+            subject: 'Strategic Sentiment Insights Report',  // Email subject
+            html: reportContent,                  // Email body content (HTML)
         };
 
         // Send the email
@@ -54,10 +104,6 @@ async function sendEmailReport(text, recipientEmail) {
         throw error; // Re-throw the error to be handled in the controller
     }
 }
-
-module.exports = {
-    sendEmailReport,
-};
 
 module.exports = {
     sendEmailReport,
