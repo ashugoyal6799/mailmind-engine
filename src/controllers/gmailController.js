@@ -13,8 +13,9 @@ async function getLabels(req, res) {
 
 async function getMessages(req, res) {
     try {
+        const isEmailsToBeUpserted = req.query.isEmailsToBeUpserted === 'true';
         const authClient = await authorize1();
-        const messages = await listMessages(authClient);
+        const messages = await listMessages(authClient,isEmailsToBeUpserted);
         res.json({ messages });
     } catch (error) {
         res.status(500).json({ error: 'Failed to retrieve messages' });

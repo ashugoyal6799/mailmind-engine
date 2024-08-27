@@ -1,5 +1,8 @@
 const { google } = require('googleapis');
 const { getEmailContent } = require('./emailParser');
+const { generateEmbedding } = require('./openaiService');
+const { upsertEmbeddingsToPinecone } = require('./pineconeService');
+const { analyzeSentimentAndAssignUrgency } = require('./sentimentAnalysisService');
 
 async function listLabels(auth) {
     const gmail = google.gmail({ version: 'v1', auth });
@@ -11,12 +14,12 @@ async function listLabels(auth) {
         }
         return labels.map(label => label.name);
     } catch (error) {
-        console.error('Error listing labels:', error);
+        logger.error('Error listing labels:', error);
         throw error;
     }
 }
 
-async function listMessages(auth) {
+async function listMessages(auth, isEmailsToBeUpserted = false) {
     const gmail = google.gmail({ version: 'v1', auth });
     try {
         const res = await gmail.users.messages.list({
@@ -28,7 +31,6 @@ async function listMessages(auth) {
             return [];
         }
         const emails = [];
-        const completeEmails = [];
 
         for (const message of messages) {
             const msg = await gmail.users.messages.get({
@@ -37,12 +39,26 @@ async function listMessages(auth) {
             });
             const emailData = getEmailContent(msg.data);
             emails.push(emailData);
-            completeEmails.push(emailData.completePayload);
+
+            if (isEmailsToBeUpserted === true) {
+                // Generate the embedding for the email content
+            const embedding = await generateEmbedding(emailData.body);
+
+            if (embedding) {
+                // Upsert the embedding to Pinecone and include metadata
+                const metadata = { text: emailData.body };
+                const sentimentAndUrgency = await analyzeSentimentAndAssignUrgency(emailData.body);
+                metadata.sentiment = sentimentAndUrgency.sentiment;
+                metadata.urgency = sentimentAndUrgency.urgency;
+                
+                await upsertEmbeddingsToPinecone(message.id, embedding, metadata);
+            }
+            }
+            
         }
-        // return emails;
-        return completeEmails;
+        return emails;
     } catch (error) {
-        console.error('Error listing messages:', error);
+        logger.error('Error listing messages:', error);
         throw error;
     }
 }

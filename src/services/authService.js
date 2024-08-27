@@ -68,6 +68,5 @@ async function authorize1(){
 }
 
 module.exports = {
-    authorize,
     authorize1,
 };
